@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bayelsa Life</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #10251e;
+      color: white;
+      text-align: center;
+      padding: 30px 16px;
+    }
+    .game {
+      max-width: 500px;
+      margin: 30px auto;
+      padding: 24px;
+      background: #1e4635;
+      border-radius: 18px;
+    }
+    button {
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 10px;
+      background: #f5c451;
+      color: #10251e;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌴 Bayelsa Life</h1>
+  <p>Welcome to your world. Your adventure starts here!</p>
+
+  <div class="game">
+    <h2>🏘️ Bayelsa Town</h2>
+    <p id="status">Ready to explore?</p>
+    <button onclick="startGame()">Enter Game</button>
+  </div>
+
+  <script>
+    function startGame() {
+      document.getElementById("status").textContent =
+        "Welcome! Your Bayelsa Life adventure has started.";
+    }
+  </script>
+</body>
+</html>
+  
