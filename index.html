@@ -1,52 +1,258 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bayelsa Life</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #10251e;
-      color: white;
-      text-align: center;
-      padding: 30px 16px;
-    }
-    .game {
-      max-width: 500px;
-      margin: 30px auto;
-      padding: 24px;
-      background: #1e4635;
-      border-radius: 18px;
-    }
-    button {
-      padding: 12px 20px;
-      border: 0;
-      border-radius: 10px;
-      background: #f5c451;
-      color: #10251e;
-      font-weight: bold;
-      font-size: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bayelsa Life</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#10251e;color:white;font-family:Arial,sans-serif}
+header{padding:14px;background:#163d2c;display:flex;justify-content:space-between;align-items:center;gap:8px}
+header h2{margin:0;font-size:20px}
+.wallet{color:#ffd36a;font-weight:bold}
+main{max-width:850px;margin:auto;padding:14px}
+.card{background:#1c3b2d;border-radius:16px;padding:14px;margin-bottom:14px}
+canvas{width:100%;display:block;border-radius:12px;background:#8fcf83;touch-action:none}
+.stats{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px;margin:10px 0}
+.controls{display:grid;grid-template-columns:repeat(3,60px);gap:8px;justify-content:center;margin:14px auto}
+button{border:0;border-radius:10px;padding:13px;background:#f4c653;color:#173222;font-size:16px;font-weight:bold;cursor:pointer;touch-action:manipulation}
+.controls button{font-size:22px;min-height:52px}
+.controls .empty{visibility:hidden}
+.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+input{min-width:0;width:100%;padding:12px;border-radius:9px;border:1px solid #688777;font-size:16px}
+.chatlog{height:190px;overflow-y:auto;background:#10251e;border-radius:10px;padding:10px;margin:10px 0;overflow-wrap:anywhere}
+.msg{padding:6px 0;border-bottom:1px solid #345443;font-size:14px}
+.muted{color:#c0d0c6;font-size:13px}
+.row{display:flex;gap:8px}
+.row button{white-space:nowrap}
+@media(max-width:420px){main{padding:9px}.card{padding:10px}header h2{font-size:17px}}
+</style>
 </head>
 <body>
-  <h1>🌴 Bayelsa Life</h1>
-  <p>Welcome to your world. Your adventure starts here!</p>
+<header>
+  <h2>🌴 Bayelsa Life</h2>
+  <div class="wallet">₦<span id="money">1000</span></div>
+</header>
 
-  <div class="game">
-    <h2>🏘️ Bayelsa Town</h2>
-    <p id="status">Ready to explore?</p>
-    <button onclick="startGame()">Enter Game</button>
-  </div>
+<main>
+  <section class="card">
+    <h3>🏘️ Bayelsa Town</h3>
+    <p class="muted">Explore the town. Use the buttons or your keyboard to move.</p>
+    <canvas id="world" width="600" height="360"></canvas>
+    <div class="stats">
+      <span>👤 <b id="playerLabel">Player</b></span>
+      <span id="location">📍 Town Square</span>
+    </div>
+    <div class="controls">
+      <span class="empty"></span>
+      <button data-move="up" aria-label="Move up">⬆️</button>
+      <span class="empty"></span>
+      <button data-move="left" aria-label="Move left">⬅️</button>
+      <button data-move="down" aria-label="Move down">⬇️</button>
+      <button data-move="right" aria-label="Move right">➡️</button>
+    </div>
+    <div class="actions">
+      <button id="job">💼 Do a quick job (+₦100)</button>
+      <button id="rename">✏️ Change name</button>
+    </div>
+    <p class="muted">Walk near the market, river or town hall to explore them.</p>
+  </section>
 
-  <script>
-    function startGame() {
-      document.getElementById("status").textContent =
-        "Welcome! Your Bayelsa Life adventure has started.";
+  <section class="card">
+    <h3>💬 Town Chat</h3>
+    <p class="muted">Chat with other visitors using text. Everyone joins the same town room.</p>
+    <label for="chatName">Your chat name</label>
+    <input id="chatName" maxlength="24" placeholder="Enter your name">
+    <div id="chatStatus" class="muted" style="margin-top:8px">Connecting to town chat…</div>
+    <div id="chatLog" class="chatlog" aria-live="polite"></div>
+    <form id="chatForm" class="row">
+      <input id="chatInput" maxlength="300" placeholder="Write a message…" required>
+      <button type="submit">Send</button>
+    </form>
+    <p class="muted">Please be respectful. Never share passwords or private information in chat.</p>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://rlpsyngeymsikdmapzmr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_EXuRC0x7IL53KOjetCP_gw_NQuUhvYz";
+
+const $ = id => document.getElementById(id);
+let money = Number(localStorage.getItem("bl-money") || 1000);
+let playerName = localStorage.getItem("bl-name") || "Bayelsa Player";
+$("money").textContent = money;
+$("playerLabel").textContent = playerName;
+$("chatName").value = playerName;
+
+function setName(name) {
+  name = name.trim().slice(0,24);
+  if (!name) return;
+  playerName = name;
+  localStorage.setItem("bl-name", name);
+  $("playerLabel").textContent = name;
+  $("chatName").value = name;
+}
+$("rename").onclick = () => {
+  const n = prompt("Choose your player name:", playerName);
+  if (n !== null) setName(n);
+};
+$("chatName").addEventListener("change", () => setName($("chatName").value));
+
+function addMoney(amount) {
+  money += amount;
+  localStorage.setItem("bl-money", money);
+  $("money").textContent = money;
+}
+$("job").onclick = () => {
+  addMoney(100);
+  alert("Job completed! You earned ₦100.");
+};
+
+const canvas = $("world");
+const ctx = canvas.getContext("2d");
+const player = {x:300,y:180};
+const keys = new Set();
+const places = [
+  {x:60,y:65,w:110,h:65,name:"Market",emoji:"🏪"},
+  {x:420,y:55,w:115,h:70,name:"Town Hall",emoji:"🏛️"},
+  {x:420,y:250,w:120,h:65,name:"River Bank",emoji:"🌊"}
+];
+const visited = new Set();
+
+function drawWorld() {
+  ctx.clearRect(0,0,600,360);
+  ctx.fillStyle="#91cf83";ctx.fillRect(0,0,600,360);
+  // River
+  ctx.fillStyle="#54b9d4";
+  ctx.beginPath();ctx.moveTo(0,290);ctx.quadraticCurveTo(150,250,270,305);
+  ctx.quadraticCurveTo(430,350,600,285);ctx.lineTo(600,360);ctx.lineTo(0,360);ctx.fill();
+  // Paths
+  ctx.strokeStyle="#d8bd85";ctx.lineWidth=30;ctx.beginPath();
+  ctx.moveTo(0,180);ctx.lineTo(600,180);ctx.moveTo(300,0);ctx.lineTo(300,360);ctx.stroke();
+  // Trees
+  for(let i=0;i<20;i++){
+    const x=(i*83+30)%590, y=(i*57+20)%245;
+    if(Math.abs(x-300)<35 || Math.abs(y-180)<28) continue;
+    ctx.fillStyle="#805533";ctx.fillRect(x-3,y+8,6,12);
+    ctx.fillStyle=i%2?"#176d3c":"#25834b";
+    ctx.beginPath();ctx.arc(x,y,13,0,Math.PI*2);ctx.fill();
+  }
+  // Buildings
+  for(const p of places){
+    ctx.fillStyle="#f3e7ca";ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle="#bb5e45";ctx.fillRect(p.x-5,p.y-8,p.w+10,15);
+    ctx.fillStyle="#234b37";ctx.font="25px Arial";
+    ctx.textAlign="center";ctx.fillText(p.emoji,p.x+p.w/2,p.y+34);
+    ctx.fillStyle="#193d2c";ctx.font="bold 13px Arial";
+    ctx.fillText(p.name,p.x+p.w/2,p.y+p.h-8);
+  }
+  // Player
+  ctx.fillStyle="#173d2c";ctx.beginPath();ctx.arc(player.x,player.y,15,0,Math.PI*2);ctx.fill();
+  ctx.font="25px Arial";ctx.textAlign="center";ctx.fillText("🧍",player.x,player.y+9);
+  ctx.fillStyle="#142d20";ctx.font="bold 12px Arial";
+  ctx.fillText(playerName.slice(0,16),player.x,player.y-22);
+  let current="Town Square";
+  for(const p of places){
+    const near=player.x>p.x-25&&player.x<p.x+p.w+25&&player.y>p.y-25&&player.y<p.y+p.h+25;
+    if(near){
+      current=p.name;
+      if(!visited.has(p.name)){
+        visited.add(p.name);addMoney(25);
+        $("location").textContent="📍 "+p.name+" (+₦25)";
+      }
     }
-  </script>
+  }
+  if(current==="Town Square") $("location").textContent="📍 Town Square";
+}
+function move(dx,dy){
+  player.x=Math.max(16,Math.min(584,player.x+dx));
+  player.y=Math.max(18,Math.min(344,player.y+dy));
+  drawWorld();
+}
+document.querySelectorAll("[data-move]").forEach(btn=>{
+  const dir=btn.dataset.move;
+  const delta={up:[0,-8],down:[0,8],left:[-8,0],right:[8,0]}[dir];
+  let held;
+  const start=e=>{
+    e.preventDefault();
+    if(held)return;
+    move(...delta);
+    held=setInterval(()=>move(...delta),90);
+  };
+  const stop=()=>{if(held){clearInterval(held);held=null;}};
+  btn.addEventListener("pointerdown",start);
+  btn.addEventListener("pointerup",stop);
+  btn.addEventListener("pointerleave",stop);
+  btn.addEventListener("pointercancel",stop);
+});
+document.addEventListener("keydown",e=>{
+  const dirs={ArrowUp:[0,-8],w:[0,-8],ArrowDown:[0,8],s:[0,8],
+    ArrowLeft:[-8,0],a:[-8,0],ArrowRight:[8,0],d:[8,0]};
+  if(dirs[e.key]){e.preventDefault();if(!keys.has(e.key)){keys.add(e.key);move(...dirs[e.key]);}}
+});
+document.addEventListener("keyup",e=>keys.delete(e.key));
+drawWorld();
+
+// Supabase text chat
+const chatLog=$("chatLog");
+function status(s){$("chatStatus").textContent=s;}
+function addMessage(m){
+  const row=document.createElement("div");row.className="msg";
+  const time=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+  const who=document.createElement("strong");who.textContent=(m.player_name||"Player")+": ";
+  const body=document.createElement("span");body.textContent=m.message||"";
+  const stamp=document.createElement("span");stamp.className="muted";stamp.textContent=" "+time;
+  row.append(who,body,stamp);chatLog.appendChild(row);
+  while(chatLog.children.length>100)chatLog.firstChild.remove();
+  chatLog.scrollTop=chatLog.scrollHeight;
+}
+let supabaseClient=null;
+let seen=new Set();
+async function startChat(){
+  if(!window.supabase){status("Chat library failed to load. Check your internet and refresh.");return;}
+  try{
+    supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    const {data,error}=await supabaseClient.from("chat_messages")
+      .select("id,room_name,player_name,message,created_at")
+      .eq("room_name","bayelsa-town").order("created_at",{ascending:false}).limit(40);
+    if(error)throw error;
+    (data||[]).reverse().forEach(m=>{seen.add(m.id);addMessage(m);});
+    status("Connected to Bayelsa Town chat.");
+    supabaseClient.channel("bayelsa-town-chat")
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages",filter:"room_name=eq.bayelsa-town"},payload=>{
+        const m=payload.new;
+        if(!seen.has(m.id)){seen.add(m.id);addMessage(m);}
+      }).subscribe(s=>{
+        if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")status("Live chat connection issue. Refresh to retry.");
+      });
+  }catch(e){
+    console.error(e);
+    status("Chat could not connect. Check your Supabase settings and internet.");
+  }
+}
+$("chatForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("chatName").value.trim().slice(0,24);
+  const message=$("chatInput").value.trim();
+  if(!name||!message)return;
+  if(!supabaseClient){status("Chat is not connected yet.");return;}
+  const send=$("chatForm").querySelector("button");
+  send.disabled=true;
+  try{
+    const {error}=await supabaseClient.from("chat_messages").insert({
+      room_name:"bayelsa-town",player_name:name,message:message
+    });
+    if(error)throw error;
+    $("chatInput").value="";
+    status("Message sent.");
+  }catch(err){
+    console.error(err);status("Message not sent. Please try again.");
+  }finally{send.disabled=false;}
+});
+startChat();
+</script>
 </body>
-</html>
+  </html>
   
