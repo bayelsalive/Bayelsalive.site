@@ -3,256 +3,351 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bayelsa Life</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Bayelsa Life 3D</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#10251e;color:white;font-family:Arial,sans-serif}
-header{padding:14px;background:#163d2c;display:flex;justify-content:space-between;align-items:center;gap:8px}
-header h2{margin:0;font-size:20px}
-.wallet{color:#ffd36a;font-weight:bold}
-main{max-width:850px;margin:auto;padding:14px}
-.card{background:#1c3b2d;border-radius:16px;padding:14px;margin-bottom:14px}
-canvas{width:100%;display:block;border-radius:12px;background:#8fcf83;touch-action:none}
-.stats{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:14px;margin:10px 0}
-.controls{display:grid;grid-template-columns:repeat(3,60px);gap:8px;justify-content:center;margin:14px auto}
-button{border:0;border-radius:10px;padding:13px;background:#f4c653;color:#173222;font-size:16px;font-weight:bold;cursor:pointer;touch-action:manipulation}
-.controls button{font-size:22px;min-height:52px}
-.controls .empty{visibility:hidden}
-.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-input{min-width:0;width:100%;padding:12px;border-radius:9px;border:1px solid #688777;font-size:16px}
-.chatlog{height:190px;overflow-y:auto;background:#10251e;border-radius:10px;padding:10px;margin:10px 0;overflow-wrap:anywhere}
-.msg{padding:6px 0;border-bottom:1px solid #345443;font-size:14px}
-.muted{color:#c0d0c6;font-size:13px}
-.row{display:flex;gap:8px}
-.row button{white-space:nowrap}
-@media(max-width:420px){main{padding:9px}.card{padding:10px}header h2{font-size:17px}}
+body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#87ceeb;color:white;touch-action:none}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+.panel{background:#10251edb;border:1px solid #ffffff30;border-radius:13px;padding:10px;box-shadow:0 4px 16px #0003}
+#brand{position:absolute;top:10px;left:10px;font-weight:bold;font-size:17px}
+#stats{position:absolute;top:55px;left:10px;width:155px;font-size:12px}
+.bar{height:7px;background:#ffffff30;border-radius:8px;overflow:hidden;margin:5px 0}
+.fill{height:100%;width:100%;background:#46df83}
+#money{position:absolute;top:10px;right:10px;font-weight:bold;color:#ffe57a}
+#place{position:absolute;top:100px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px}
+#mission{position:absolute;top:140px;left:50%;transform:translateX(-50%);background:#12271dd9;padding:8px 12px;border-radius:10px;font-size:12px;white-space:nowrap}
+#help{position:absolute;bottom:155px;left:50%;transform:translateX(-50%);font-size:11px;color:white;text-shadow:0 1px 3px #000;white-space:nowrap}
+#controls{position:absolute;bottom:18px;left:15px;display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:4px;pointer-events:auto}
+.ctrl{border:1px solid #ffffff70;border-radius:13px;background:#17372dbd;color:white;font-size:20px;touch-action:none;user-select:none}
+#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+#actions{position:absolute;bottom:25px;right:14px;display:flex;flex-direction:column;gap:9px;pointer-events:auto}
+.action{border:1px solid #ffffff70;border-radius:50%;width:58px;height:58px;background:#17372dc9;color:white;font-weight:bold;font-size:11px;touch-action:none}
+#run{background:#bd6c22e8}
+#toast{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);background:#10251eeb;padding:10px 15px;border-radius:10px;font-size:12px;display:none;text-align:center;max-width:85%}
+#maplabel{position:absolute;right:10px;top:60px;font-size:10px;color:#d8ffdc;text-align:right}
+@media(min-width:750px){
+ #controls{left:28px;bottom:25px;transform:scale(1.1);transform-origin:bottom left}
+ #actions{right:28px;bottom:35px}
+ #stats{width:180px}
+}
 </style>
 </head>
 <body>
-<header>
-  <h2>🌴 Bayelsa Life</h2>
-  <div class="wallet">₦<span id="money">1000</span></div>
-</header>
+<div id="hud">
+ <div id="brand" class="panel">🌴 BAYELSA LIFE 3D</div>
+ <div id="stats" class="panel">
+  <div>👤 Local Player</div>
+  <div style="margin-top:8px">⚡ Energy <span id="energyText">100</span>%</div>
+  <div class="bar"><div id="energyBar" class="fill"></div></div>
+  <div>📍 Yenagoa Explorer</div>
+ </div>
+ <div id="money" class="panel">₦ <span id="cash">1000</span></div>
+ <div id="place" class="panel">📍 Yenagoa Town</div>
+ <div id="mission">🎯 Explore your new town!</div>
+ <div id="maplabel">BAYELSA STATE<br>EXPLORATION MODE</div>
+ <div id="help">Use the controls to explore the town</div>
+ <div id="controls">
+  <button class="ctrl" id="up">▲</button>
+  <button class="ctrl" id="left">◀</button>
+  <button class="ctrl" id="down">▼</button>
+  <button class="ctrl" id="right">▶</button>
+ </div>
+ <div id="actions">
+  <button class="action" id="run">RUN</button>
+  <button class="action" id="jump">JUMP</button>
+  <button class="action" id="interact">LOOK</button>
+ </div>
+ <div id="toast"></div>
+</div>
 
-<main>
-  <section class="card">
-    <h3>🏘️ Bayelsa Town</h3>
-    <p class="muted">Explore the town. Use the buttons or your keyboard to move.</p>
-    <canvas id="world" width="600" height="360"></canvas>
-    <div class="stats">
-      <span>👤 <b id="playerLabel">Player</b></span>
-      <span id="location">📍 Town Square</span>
-    </div>
-    <div class="controls">
-      <span class="empty"></span>
-      <button data-move="up" aria-label="Move up">⬆️</button>
-      <span class="empty"></span>
-      <button data-move="left" aria-label="Move left">⬅️</button>
-      <button data-move="down" aria-label="Move down">⬇️</button>
-      <button data-move="right" aria-label="Move right">➡️</button>
-    </div>
-    <div class="actions">
-      <button id="job">💼 Do a quick job (+₦100)</button>
-      <button id="rename">✏️ Change name</button>
-    </div>
-    <p class="muted">Walk near the market, river or town hall to explore them.</p>
-  </section>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-  <section class="card">
-    <h3>💬 Town Chat</h3>
-    <p class="muted">Chat with other visitors using text. Everyone joins the same town room.</p>
-    <label for="chatName">Your chat name</label>
-    <input id="chatName" maxlength="24" placeholder="Enter your name">
-    <div id="chatStatus" class="muted" style="margin-top:8px">Connecting to town chat…</div>
-    <div id="chatLog" class="chatlog" aria-live="polite"></div>
-    <form id="chatForm" class="row">
-      <input id="chatInput" maxlength="300" placeholder="Write a message…" required>
-      <button type="submit">Send</button>
-    </form>
-    <p class="muted">Please be respectful. Never share passwords or private information in chat.</p>
-  </section>
-</main>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8bd4f5);
+scene.fog = new THREE.Fog(0x8bd4f5, 65, 180);
 
-<script>
-const SUPABASE_URL = "https://rlpsyngeymsikdmapzmr.supabase.co";
-const SUPABASE_KEY = "sb_publishable_EXuRC0x7IL53KOjetCP_gw_NQuUhvYz";
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 400);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.position='fixed';
+renderer.domElement.style.inset='0';
+renderer.domElement.style.zIndex='0';
 
-const $ = id => document.getElementById(id);
-let money = Number(localStorage.getItem("bl-money") || 1000);
-let playerName = localStorage.getItem("bl-name") || "Bayelsa Player";
-$("money").textContent = money;
-$("playerLabel").textContent = playerName;
-$("chatName").value = playerName;
+scene.add(new THREE.HemisphereLight(0xdaf3ff,0x536442,2.0));
+const sun = new THREE.DirectionalLight(0xfff0d1,2.5);
+sun.position.set(-35,60,25);
+sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+scene.add(sun);
 
-function setName(name) {
-  name = name.trim().slice(0,24);
-  if (!name) return;
-  playerName = name;
-  localStorage.setItem("bl-name", name);
-  $("playerLabel").textContent = name;
-  $("chatName").value = name;
+const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness});
+const grass=mat(0x70ad59), road=mat(0x424c50), roadEdge=mat(0xc3bda8);
+const water=mat(0x279fc5,0.25), white=mat(0xffffff);
+const dark=mat(0x292e32), leaf=mat(0x247744), trunk=mat(0x805132);
+
+function block(w,h,d,m,x,y,z){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+ o.position.set(x,y+h/2,z);o.castShadow=true;o.receiveShadow=true;
+ scene.add(o);return o;
 }
-$("rename").onclick = () => {
-  const n = prompt("Choose your player name:", playerName);
-  if (n !== null) setName(n);
-};
-$("chatName").addEventListener("change", () => setName($("chatName").value));
-
-function addMoney(amount) {
-  money += amount;
-  localStorage.setItem("bl-money", money);
-  $("money").textContent = money;
+function ground(w,d,m,x=0,z=0){
+ const o=new THREE.Mesh(new THREE.PlaneGeometry(w,d),m);
+ o.rotation.x=-Math.PI/2;o.position.set(x,0,z);o.receiveShadow=true;scene.add(o);return o;
 }
-$("job").onclick = () => {
-  addMoney(100);
-  alert("Job completed! You earned ₦100.");
-};
+ground(240,240,grass);
 
-const canvas = $("world");
-const ctx = canvas.getContext("2d");
-const player = {x:300,y:180};
-const keys = new Set();
-const places = [
-  {x:60,y:65,w:110,h:65,name:"Market",emoji:"🏪"},
-  {x:420,y:55,w:115,h:70,name:"Town Hall",emoji:"🏛️"},
-  {x:420,y:250,w:120,h:65,name:"River Bank",emoji:"🌊"}
+// River and bridge
+ground(20,240,water,-45,0);
+ground(23,5,road,-45,8);
+block(24,.25,7,roadEdge,-45,.05,8);
+for(let z=5;z<12;z+=2)block(.2,.5,.2,white,-56,.2,z);
+for(let z=5;z<12;z+=2)block(.2,.5,.2,white,-34,.2,z);
+
+// Roads
+function makeRoad(w,d,x,z){
+ ground(w+1,d+1,roadEdge,x,z);
+ ground(w,d,road,x,z);
+ if(w>d){
+  for(let xx=x-w/2+2;xx<x+w/2;xx+=5)block(1.2,.025,.12,white,xx,.03,z);
+ }else{
+  for(let zz=z-d/2+2;zz<z+d/2;zz+=5)block(.12,.025,1.2,white,x,.03,zz);
+ }
+}
+makeRoad(190,9,0,0);
+makeRoad(9,170,0,0);
+makeRoad(115,8,25,-35);
+makeRoad(110,8,20,35);
+makeRoad(8,110,35,0);
+makeRoad(8,100,-30,0);
+
+// Buildings
+const buildingColors=[0xe6b56b,0xe8dfc9,0x8dc3b7,0xd67b59,0xe7d37b,0xa2b6dc,0xc7a4d6];
+function building(x,z,w,d,h,color,name){
+ block(w,h,d,mat(color),x,0,z);
+ block(w+0.35,.4,d+0.35,mat(0x554f4b),x,h,z);
+ // front door
+ block(w*.18,h*.38,.12,mat(0x533b2b),x,0,z+d/2+.07);
+ // windows
+ const windowMat=mat(0x83d5eb,0.3);
+ for(let y=1.3;y<h-0.2;y+=1.5){
+  for(let xx=x-w/2+0.8;xx<x+w/2-0.3;xx+=1.7){
+   block(.7,.65,.08,windowMat,xx,y,z+d/2+.09);
+  }
+ }
+ if(name){
+  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
+  const c=canvas.getContext('2d');
+  c.fillStyle='#15382a';c.fillRect(0,0,512,128);
+  c.fillStyle='#fff2c1';c.font='bold 44px Arial';c.textAlign='center';
+  c.fillText(name,256,80);
+  const tex=new THREE.CanvasTexture(canvas);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(w*.9,.8),new THREE.MeshBasicMaterial({map:tex}));
+  sign.position.set(x,h*.72,z+d/2+.15);scene.add(sign);
+ }
+}
+building(17,-16,10,8,7,0xdca76c,'');
+building(31,-16,10,8,5,0xe7e0c7,'');
+building(50,-16,12,9,8,0x82b7a2,'');
+building(-16,-17,11,8,6,0xe5d7a6,'');
+building(-17,15,12,9,7,0xd88b64,'');
+building(16,15,11,8,6,0x9db5dc,'');
+building(52,15,12,9,9,0xe5c96c,'');
+building(50,51,13,10,8,0xe4b49a,'');
+building(20,52,12,10,6,0x9bbfae,'');
+building(-20,51,12,10,7,0xc4a0d3,'');
+building(-15,-49,15,12,9,0xd8b07a,'');
+building(20,-50,13,11,7,0xe6d9c1,'');
+building(52,-50,15,11,10,0x9fc5db,'');
+
+// Market stalls
+function stall(x,z,color){
+ block(4,1.9,3,mat(color),x,0,z);
+ block(4.7,.2,3.7,mat(0x3d493b),x,2,z);
+ block(4.8,.18,3.8,mat(color),x,2.2,z);
+ block(.25,2.2,.25,trunk,x-1.9,0,z-1.4);
+ block(.25,2.2,.25,trunk,x+1.9,0,z-1.4);
+}
+for(let i=0;i<5;i++)stall(-75+i*9,-20,[0xe66d46,0xeca83c,0x59a778,0x5d9cc7,0xc87db2][i]);
+for(let i=0;i<4;i++)stall(-72+i*9,-32,[0xe4ae4a,0x5cae77,0xe2765a,0x5d9cc7][i]);
+building(-57,-25,18,5,5,0xdda657,'SWALI MARKET');
+
+// Airport-style terminal
+building(66,70,22,13,6,0xd9e3dd,'AIRPORT');
+block(28,.05,9,road,66,.02,84);
+for(let x=54;x<80;x+=4)block(1,.04,.2,white,x,.04,84);
+
+// Park
+ground(26,25,mat(0x7fc56b),-73,45);
+block(8,.3,8,mat(0x9d9c95),-73,.1,45);
+for(let i=0;i<8;i++){
+ const a=i*Math.PI/4;
+ block(.5,.35,.5,mat(0x82553a),-73+Math.cos(a)*8,.1,45+Math.sin(a)*8);
+}
+
+// Palm trees
+function palm(x,z,s=1){
+ const t=new THREE.Mesh(new THREE.CylinderGeometry(.22*s,.4*s,4*s,7),trunk);
+ t.position.set(x,2*s,z);t.castShadow=true;scene.add(t);
+ for(let i=0;i<7;i++){
+  const a=i*Math.PI*2/7;
+  const fr=new THREE.Mesh(new THREE.ConeGeometry(.55*s,3.2*s,5),leaf);
+  fr.position.set(x+Math.cos(a)*1.1*s,4*s,z+Math.sin(a)*1.1*s);
+  fr.rotation.z=-Math.cos(a)*.75;
+  fr.rotation.x=Math.sin(a)*.75;
+  fr.castShadow=true;scene.add(fr);
+ }
+}
+for(let i=0;i<48;i++){
+ const x=(Math.random()-.5)*180,z=(Math.random()-.5)*180;
+ if(Math.abs(x)<12||Math.abs(z)<13||Math.abs(x+45)<12)continue;
+ palm(x,z,.7+Math.random()*.5);
+}
+
+// Player character
+const player=new THREE.Group();scene.add(player);
+const skin=mat(0x8a5238), shirt=mat(0x12a66a), trousers=mat(0x243e70), shoes=mat(0x252525);
+function part(parent,geo,m,x,y,z){
+ const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o;
+}
+part(player,new THREE.CylinderGeometry(.35,.4,.95,10),shirt,0,1.35,0);
+part(player,new THREE.SphereGeometry(.33,16,12),skin,0,2.05,0);
+part(player,new THREE.SphereGeometry(.34,12,8),dark,0,2.28,0);
+const arms=[],legs=[];
+for(const side of [-1,1]){
+ const arm=part(player,new THREE.BoxGeometry(.19,.8,.22),shirt,side*.48,1.38,0);
+ arms.push(arm);
+ const leg=part(player,new THREE.BoxGeometry(.25,.78,.3),trousers,side*.19,.5,0);
+ legs.push(leg);
+ part(player,new THREE.BoxGeometry(.29,.16,.4),shoes,side*.19,.12,.07);
+}
+player.position.set(5,0,9);
+
+// Simple distant buildings
+for(let i=0;i<36;i++){
+ const x=(Math.random()-.5)*210,z=(Math.random()-.5)*210;
+ if(Math.abs(x)<70&&Math.abs(z)<70)continue;
+ block(4+Math.random()*7,3+Math.random()*8,4+Math.random()*7,
+ mat(buildingColors[i%buildingColors.length]),x,0,z);
+}
+
+// Input
+const keys={};
+let running=false,energy=100,cash=1000,jumpV=0,onGround=true,walkCycle=0;
+function bindButton(id,key){
+ const b=document.getElementById(id);
+ b.addEventListener('pointerdown',e=>{e.preventDefault();keys[key]=true;b.setPointerCapture(e.pointerId)});
+ const off=e=>{keys[key]=false};
+ b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);
+ b.addEventListener('lostpointercapture',off);
+}
+bindButton('up','up');bindButton('down','down');bindButton('left','left');bindButton('right','right');
+document.getElementById('run').addEventListener('pointerdown',e=>{e.preventDefault();running=true});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>document.getElementById('run').addEventListener(ev,()=>running=false));
+document.getElementById('jump').addEventListener('pointerdown',e=>{
+ e.preventDefault();if(onGround){jumpV=7;onGround=false}
+});
+addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();
+ if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+ keys[({arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'})[k]||k]=true;
+ if(k===' '&&onGround){jumpV=7;onGround=false}
+ if(k==='shift')running=true;
+});
+addEventListener('keyup',e=>{
+ const k=e.key.toLowerCase();
+ keys[({arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'})[k]||k]=false;
+ if(k==='shift')running=false;
+});
+
+const places=[
+ {name:'Town Square',x:5,z:9},
+ {name:'Swali Market',x:-57,z:-25},
+ {name:'Peace Park',x:-73,z:45},
+ {name:'Airport',x:66,z:70},
+ {name:'River Waterfront',x:-45,z:-20},
+ {name:'Shopping District',x:31,z:-16},
+ {name:'Residential Area',x:20,z:52}
 ];
-const visited = new Set();
+let currentPlace='';
+const toast=document.getElementById('toast');
+let toastTimer;
+function message(s){
+ toast.textContent=s;toast.style.display='block';
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.style.display='none',2400);
+}
+document.getElementById('interact').addEventListener('click',()=>{
+ const nearest=places.reduce((a,b)=>Math.hypot(player.position.x-a.x,player.position.z-a.z)<Math.hypot(player.position.x-b.x,player.position.z-b.z)?a:b);
+ message('You are exploring '+nearest.name+'. More activities coming soon!');
+});
+function nearestPlace(){
+ let best=places[0],dist=Infinity;
+ for(const p of places){
+  const d=Math.hypot(player.position.x-p.x,player.position.z-p.z);
+  if(d<dist){best=p;dist=d}
+ }
+ return dist<17?best.name:'Yenagoa Town';
+}
+const cameraOffset=new THREE.Vector3(0,8,12);
+const desiredCamera=new THREE.Vector3();
+let last=performance.now();
 
-function drawWorld() {
-  ctx.clearRect(0,0,600,360);
-  ctx.fillStyle="#91cf83";ctx.fillRect(0,0,600,360);
-  // River
-  ctx.fillStyle="#54b9d4";
-  ctx.beginPath();ctx.moveTo(0,290);ctx.quadraticCurveTo(150,250,270,305);
-  ctx.quadraticCurveTo(430,350,600,285);ctx.lineTo(600,360);ctx.lineTo(0,360);ctx.fill();
-  // Paths
-  ctx.strokeStyle="#d8bd85";ctx.lineWidth=30;ctx.beginPath();
-  ctx.moveTo(0,180);ctx.lineTo(600,180);ctx.moveTo(300,0);ctx.lineTo(300,360);ctx.stroke();
-  // Trees
-  for(let i=0;i<20;i++){
-    const x=(i*83+30)%590, y=(i*57+20)%245;
-    if(Math.abs(x-300)<35 || Math.abs(y-180)<28) continue;
-    ctx.fillStyle="#805533";ctx.fillRect(x-3,y+8,6,12);
-    ctx.fillStyle=i%2?"#176d3c":"#25834b";
-    ctx.beginPath();ctx.arc(x,y,13,0,Math.PI*2);ctx.fill();
-  }
-  // Buildings
-  for(const p of places){
-    ctx.fillStyle="#f3e7ca";ctx.fillRect(p.x,p.y,p.w,p.h);
-    ctx.fillStyle="#bb5e45";ctx.fillRect(p.x-5,p.y-8,p.w+10,15);
-    ctx.fillStyle="#234b37";ctx.font="25px Arial";
-    ctx.textAlign="center";ctx.fillText(p.emoji,p.x+p.w/2,p.y+34);
-    ctx.fillStyle="#193d2c";ctx.font="bold 13px Arial";
-    ctx.fillText(p.name,p.x+p.w/2,p.y+p.h-8);
-  }
-  // Player
-  ctx.fillStyle="#173d2c";ctx.beginPath();ctx.arc(player.x,player.y,15,0,Math.PI*2);ctx.fill();
-  ctx.font="25px Arial";ctx.textAlign="center";ctx.fillText("🧍",player.x,player.y+9);
-  ctx.fillStyle="#142d20";ctx.font="bold 12px Arial";
-  ctx.fillText(playerName.slice(0,16),player.x,player.y-22);
-  let current="Town Square";
-  for(const p of places){
-    const near=player.x>p.x-25&&player.x<p.x+p.w+25&&player.y>p.y-25&&player.y<p.y+p.h+25;
-    if(near){
-      current=p.name;
-      if(!visited.has(p.name)){
-        visited.add(p.name);addMoney(25);
-        $("location").textContent="📍 "+p.name+" (+₦25)";
-      }
-    }
-  }
-  if(current==="Town Square") $("location").textContent="📍 Town Square";
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-last)/1000,.04);last=now;
+ const forward=(keys.up?1:0)-(keys.down?1:0);
+ const side=(keys.right?1:0)-(keys.left?1:0);
+ const moving=forward!==0||side!==0;
+ const speed=running&&energy>0?10:5.5;
+ if(running&&moving)energy=Math.max(0,energy-13*dt);
+ else energy=Math.min(100,energy+5*dt);
+ if(moving){
+  const len=Math.hypot(forward,side);
+  const f=forward/len,s=side/len;
+  player.position.x+=(s*Math.cos(0)+f*Math.sin(0))*speed*dt;
+  player.position.z+=(s*Math.sin(0)-f*Math.cos(0))*speed*dt;
+  player.rotation.y=Math.atan2(s,-f);
+  walkCycle+=dt*speed*1.6;
+  legs[0].rotation.x=Math.sin(walkCycle)*.55;
+  legs[1].rotation.x=-Math.sin(walkCycle)*.55;
+  arms[0].rotation.x=-Math.sin(walkCycle)*.45;
+  arms[1].rotation.x=Math.sin(walkCycle)*.45;
+ }else{
+  legs.forEach(o=>o.rotation.x*=.8);
+  arms.forEach(o=>o.rotation.x*=.8);
+ }
+ if(!onGround||jumpV>0){
+  player.position.y+=jumpV*dt;
+  jumpV-=18*dt;
+  if(player.position.y<=0){player.position.y=0;jumpV=0;onGround=true}
+ }
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-105,105);
+ player.position.z=THREE.MathUtils.clamp(player.position.z,-105,105);
+ const p=nearestPlace();
+ if(p!==currentPlace){currentPlace=p;document.getElementById('place').textContent='📍 '+p}
+ document.getElementById('energyText').textContent=Math.round(energy);
+ document.getElementById('energyBar').style.width=energy+'%';
+ document.getElementById('energyBar').style.background=energy<25?'#ff6c5e':'#46df83';
+ desiredCamera.set(player.position.x,player.position.y,player.position.z).add(cameraOffset);
+ camera.position.lerp(desiredCamera,1-Math.pow(.001,dt));
+ camera.lookAt(player.position.x,player.position.y+1.3,player.position.z);
+ renderer.render(scene,camera);
 }
-function move(dx,dy){
-  player.x=Math.max(16,Math.min(584,player.x+dx));
-  player.y=Math.max(18,Math.min(344,player.y+dy));
-  drawWorld();
-}
-document.querySelectorAll("[data-move]").forEach(btn=>{
-  const dir=btn.dataset.move;
-  const delta={up:[0,-8],down:[0,8],left:[-8,0],right:[8,0]}[dir];
-  let held;
-  const start=e=>{
-    e.preventDefault();
-    if(held)return;
-    move(...delta);
-    held=setInterval(()=>move(...delta),90);
-  };
-  const stop=()=>{if(held){clearInterval(held);held=null;}};
-  btn.addEventListener("pointerdown",start);
-  btn.addEventListener("pointerup",stop);
-  btn.addEventListener("pointerleave",stop);
-  btn.addEventListener("pointercancel",stop);
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
 });
-document.addEventListener("keydown",e=>{
-  const dirs={ArrowUp:[0,-8],w:[0,-8],ArrowDown:[0,8],s:[0,8],
-    ArrowLeft:[-8,0],a:[-8,0],ArrowRight:[8,0],d:[8,0]};
-  if(dirs[e.key]){e.preventDefault();if(!keys.has(e.key)){keys.add(e.key);move(...dirs[e.key]);}}
-});
-document.addEventListener("keyup",e=>keys.delete(e.key));
-drawWorld();
-
-// Supabase text chat
-const chatLog=$("chatLog");
-function status(s){$("chatStatus").textContent=s;}
-function addMessage(m){
-  const row=document.createElement("div");row.className="msg";
-  const time=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
-  const who=document.createElement("strong");who.textContent=(m.player_name||"Player")+": ";
-  const body=document.createElement("span");body.textContent=m.message||"";
-  const stamp=document.createElement("span");stamp.className="muted";stamp.textContent=" "+time;
-  row.append(who,body,stamp);chatLog.appendChild(row);
-  while(chatLog.children.length>100)chatLog.firstChild.remove();
-  chatLog.scrollTop=chatLog.scrollHeight;
-}
-let supabaseClient=null;
-let seen=new Set();
-async function startChat(){
-  if(!window.supabase){status("Chat library failed to load. Check your internet and refresh.");return;}
-  try{
-    supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    const {data,error}=await supabaseClient.from("chat_messages")
-      .select("id,room_name,player_name,message,created_at")
-      .eq("room_name","bayelsa-town").order("created_at",{ascending:false}).limit(40);
-    if(error)throw error;
-    (data||[]).reverse().forEach(m=>{seen.add(m.id);addMessage(m);});
-    status("Connected to Bayelsa Town chat.");
-    supabaseClient.channel("bayelsa-town-chat")
-      .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages",filter:"room_name=eq.bayelsa-town"},payload=>{
-        const m=payload.new;
-        if(!seen.has(m.id)){seen.add(m.id);addMessage(m);}
-      }).subscribe(s=>{
-        if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")status("Live chat connection issue. Refresh to retry.");
-      });
-  }catch(e){
-    console.error(e);
-    status("Chat could not connect. Check your Supabase settings and internet.");
-  }
-}
-$("chatForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const name=$("chatName").value.trim().slice(0,24);
-  const message=$("chatInput").value.trim();
-  if(!name||!message)return;
-  if(!supabaseClient){status("Chat is not connected yet.");return;}
-  const send=$("chatForm").querySelector("button");
-  send.disabled=true;
-  try{
-    const {error}=await supabaseClient.from("chat_messages").insert({
-      room_name:"bayelsa-town",player_name:name,message:message
-    });
-    if(error)throw error;
-    $("chatInput").value="";
-    status("Message sent.");
-  }catch(err){
-    console.error(err);status("Message not sent. Please try again.");
-  }finally{send.disabled=false;}
-});
-startChat();
+message('Welcome to Bayelsa Life! Explore Yenagoa.');
+requestAnimationFrame(animate);
 </script>
 </body>
-  </html>
-  
+</html>
